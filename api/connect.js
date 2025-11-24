@@ -1,48 +1,39 @@
-const express = require('express');
-const nodemailer = require('nodemailer');
-const cors = require('cors');
-const dotenv = require('dotenv');
+const nodemailer = require("nodemailer");
 
-dotenv.config({ path: './config.env' });
+module.exports = async (req, res) => {
+  // CORS
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-const app = express();
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-app.use(cors({
-  origin: "https://sudheerkumar-adapa.netlify.app"
-}));
-app.use(express.json());
-
-// Nodemailer setup
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL,
-    pass: process.env.EMAIL_APP_PASSWORD
-  }
-});
-
-// Route
-app.post("/", async (req, res) => {
   const { name, email, message } = req.body;
 
+  if (!name || !email || !message) {
+    return res.status(400).json({ success: false, error: "All fields required" });
+  }
+
   try {
-    console.log("Sending email...");
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL,
+        pass: process.env.EMAIL_APP_PASSWORD
+      }
+    });
+
     await transporter.sendMail({
       from: process.env.EMAIL,
       to: process.env.EMAIL,
       subject: `📩 Portfolio Message from ${name}`,
-      text: `
-        Name: ${name}
-        Email: ${email}
-        Message:
-        ${message}
-      `
+      text: `Name: ${name}\nEmail: ${email}\nMessage:\n${message}`
     });
 
-    return res.json({ success: true });
-  } catch (err) {
-    return res.status(500).json({ success: false, error: err.message });
-  }
-});
+    return res.status(200).json({ success: true });
 
-module.exports = app;
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
